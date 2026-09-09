@@ -11,7 +11,25 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 
 
-#riceClassification.csv - PyTorch Practice in Machine learning folder
+# Rice Type Classification using PyTorch
+#
+# Description:
+# This project implements a feedforward neural network in PyTorch for binary
+# classification of rice varieties. The workflow includes data loading and
+# preprocessing, train/validation/test splitting, feature standardization,
+# mini-batch data loading, neural network training, validation, final testing,
+# metric visualization, and model checkpointing.
+#
+# The model consists of an input layer, a ReLU-activated hidden layer, dropout
+# regularization, and a sigmoid output layer for binary classification.
+# Binary Cross-Entropy (BCE) is used as the loss function and Adam is used
+# for gradient-based optimization.
+#
+# Dataset:
+# Rice Type Classification
+# Kaggle: https://www.kaggle.com/datasets/mssmartypants/rice-type-classification
+# The dataset is provided locally as "riceClassification.csv".
+
 
 class RiceDataset(Dataset):
     def __init__(self, X, y, device):
@@ -26,17 +44,17 @@ class RiceDataset(Dataset):
 
 
 class MyModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, dropout_p=0.3):  # new: dropout_p param
+    def __init__(self, input_dim, hidden_dim, dropout_p=0.3):
         super(MyModel, self).__init__()
         self.input_layer = nn.Linear(in_features=input_dim, out_features=hidden_dim)
-        self.dropout = nn.Dropout(dropout_p)  # new
+        self.dropout = nn.Dropout(dropout_p)
         self.linear = nn.Linear(in_features=hidden_dim, out_features=1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = self.input_layer(x)
         x = torch.relu(x)
-        x = self.dropout(x)  # new
+        x = self.dropout(x)
         x = self.linear(x)
         x = self.sigmoid(x)
         return x
@@ -46,6 +64,7 @@ def load_and_preprocess_data(path):
     df = pd.read_csv(path)
     print(df.head())
 
+    # Inspect dataset structure before preprocessing.
     for col in df.columns:
         print(f"Column: {col}, Unique Values: {df[col].nunique()}, Data Type: {df[col].dtype}")
 
@@ -58,9 +77,11 @@ def load_and_preprocess_data(path):
 
 
 def split_and_scale(X, y):
+    # Keep validation and test data separate from the training process.
     X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42)
     X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
 
+    # Fit the scaler only on training data to prevent data leakage.
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_val = scaler.transform(X_val)
@@ -125,6 +146,7 @@ def plot_metrics(train_losses, val_losses, train_accs, val_accs):
 
 
 def main():
+    # Use GPU acceleration when available; otherwise fall back to CPU.
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -135,6 +157,7 @@ def main():
     val_data = RiceDataset(X_val, y_val, device)
     testing_data = RiceDataset(X_test, y_test, device)
 
+    # Mini-batches allow the model to update parameters incrementally.
     train_loader = DataLoader(training_data, batch_size=8, shuffle=True)
     val_loader = DataLoader(val_data, batch_size=8, shuffle=False)
     test_loader = DataLoader(testing_data, batch_size=8, shuffle=False)
@@ -169,11 +192,13 @@ def main():
             Val Loss: {val_loss:.4f}, 
             Val Acc: {val_acc*100:.2f}%''')
 
+    # Evaluate once on the held-out test set after training is complete.
     test_loss, test_acc = evaluate(model, test_loader, criterion)
     print(f'''Test Loss: {test_loss:.4f}, 
         Test Acc: {test_acc*100:.2f}%''')
 
-    torch.save(model.state_dict(), "rice_model.pth")  # new
+    # Save the trained parameters for later inference or analysis.
+    torch.save(model.state_dict(), "rice_model.pth")
 
     plot_metrics(total_loss_train_plot, total_loss_val_plot, total_acc_train_plot, total_acc_val_plot)
 
